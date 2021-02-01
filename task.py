@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Body, HTTPException
+from fastapi import FastAPI, Body, HTTPException, Header, Request
 from PIL import Image
 import requests
 import cv2
@@ -9,12 +9,18 @@ import re
 app = FastAPI()
 
 @app.post("/compare")
-def comparePhotos(request: dict = Body(...)):
-    url_regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
+def comparePhotos(request: Request, body = Body(...)):
 
-    if 'apiKey' in request.keys():
-        if request['apiKey'] == 'sRo09WDtPVQJ4IN7NsckfsyQtpo':
-            img1, img2 = request['first_photo'], request['second_photo']
+    url_regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
+    apiKey = ''
+    if 'apiKey' in body.keys() or request.headers['apiKey']:
+        if 'apiKey' in body.keys():
+            apiKey = body['apiKey']
+        elif request.headers['apiKey']:
+            apiKey = request.headers['apiKey']
+
+        if apiKey == 'sRo09WDtPVQJ4IN7NsckfsyQtpo':
+            img1, img2 = body['first_photo'], body['second_photo']
 
             if re.match(url_regex, img1):
                 img1 = requests.get(img1, stream=True).raw
@@ -24,7 +30,7 @@ def comparePhotos(request: dict = Body(...)):
         
             img1 = openImage(img1,'first')
             img2 = openImage(img2,'second')
-          
+            
             return {"Percentage": str(computeSimilarity(img1, img2))+"%"}
         else:
             raise HTTPException(status_code=404, detail="Invalid API Key!")
